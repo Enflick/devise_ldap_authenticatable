@@ -133,11 +133,13 @@ module Devise
             end
           end
         else
-          filter = Net::LDAP::Filter.join(
-            Net::LDAP::Filter.eq(@user_lookup_attribute, dn),
-            Net::LDAP::Filter.eq(@group_lookup_attribute, group_name)
-          )
+          # filter = Net::LDAP::Filter.join(
+          #   Net::LDAP::Filter.eq(@user_lookup_attribute, dn),
+          #   Net::LDAP::Filter.eq(@group_lookup_attribute, group_name)
+          # )
+          filter = Net::LDAP::Filter.eq(@user_lookup_attribute, dn)
           search_result = admin_ldap.search(base: @ldap.base, filter: filter, return_result: true, attributes: %w[memberOf])
+          puts @user_lookup_attribute, dn, search_result.inspect
           in_group = search_result && search_result.first && search_result.first[:memberOf].is_a?(Array)
         end
 
@@ -145,7 +147,7 @@ module Devise
           DeviseLdapAuthenticatable::Logger.send("User #{dn} is not in group: #{group_name}")
         end
 
-        return in_group
+        in_group
       end
 
       def has_required_attribute?
@@ -189,6 +191,8 @@ module Devise
           @ldap.search(:filter => filter) {|entry| ldap_entry = entry; match_count+=1}
           DeviseLdapAuthenticatable::Logger.send("LDAP search yielded #{match_count} matches")
           ldap_entry
+        rescue Net::LDAP::BindingInformationInvalidError => e
+          puts "Couldn't perform LDAP search: #{e}"
         end
       end
 
