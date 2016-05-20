@@ -48,7 +48,7 @@ describe 'Users' do
         should_be_validated @user, "secret"
         @user.password = "changed"
         @user.change_password!("secret")
-        should_be_validated @user, "changed", "password was not changed properly on the LDAP sevrer"
+        should_be_validated @user, "changed", "password was not changed properly on the LDAP server"
       end
 
       it "should not allow to change password if setting is false" do
@@ -327,5 +327,4 @@ describe 'Users' do
       should_be_validated @other, "other_secret"
     end
   end
-
 end
