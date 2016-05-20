@@ -26,6 +26,7 @@ module Devise
         @group_lookup_attribute = ldap_config["group_lookup_attribtue"] || 'memberof'
         @group_base = ldap_config["group_base"]
         @check_group_membership = ldap_config.has_key?("check_group_membership") ? ldap_config["check_group_membership"] : ::Devise.ldap_check_group_membership
+        @check_group_membership_without_admin = ldap_config.has_key?("check_group_membership_without_admin") ? ldap_config["check_group_membership_without_admin"] : ::Devise.ldap_check_group_membership_without_adminkj
         @required_groups = ldap_config["required_groups"]
         @required_attributes = ldap_config["require_attribute"]
 
@@ -33,7 +34,6 @@ module Devise
         @group_lookup_attribute = ldap_config["group_lookup_attribtue"] || 'memberof'
 
         @ldap.auth ldap_config["admin_user"], ldap_config["admin_password"] if params[:admin]
-        @ldap.auth params[:login], params[:password] if ldap_config["admin_as_user"]
 
         @login = params[:login]
         @password = params[:password]
@@ -105,11 +105,11 @@ module Devise
       end
 
       def change_password!
-        update_ldap(:userpassword => Net::LDAP::Password.generate(:sha, @new_password))
+        update_ldap(:userPassword => ::Devise.ldap_auth_password_builder.call(@new_password))
       end
 
       def in_required_groups?
-        return true unless @check_group_membership
+        return true unless @check_group_membership || @check_group_membership_without_admin
 
         ## FIXME set errors here, the ldap.yml isn't set properly.
         return false if @required_groups.nil?
@@ -127,10 +127,14 @@ module Devise
       def in_group?(group_name, group_attribute = LDAP::DEFAULT_GROUP_UNIQUE_MEMBER_LIST_KEY)
         in_group = false
 
-        admin_ldap = Connection.admin
+        if @check_group_membership_without_admin
+          group_checking_ldap = @ldap
+        else
+          group_checking_ldap = Connection.admin
+        end
 
         unless ::Devise.ldap_ad_group_check
-          admin_ldap.search(:base => group_name, :scope => Net::LDAP::SearchScope_BaseObject) do |entry|
+          group_checking_ldap.search(:base => group_name, :scope => Net::LDAP::SearchScope_BaseObject) do |entry|
             if entry[group_attribute].include? dn
               in_group = true
             end
