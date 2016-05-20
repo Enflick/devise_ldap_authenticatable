@@ -44,7 +44,7 @@ module Devise
 
 
   mattr_accessor :ldap_check_group_membership_without_admin
-  @@ldap_check_group_membership_without_admin = falsej
+  @@ldap_check_group_membership_without_admin = false
 end
 
 # Add ldap_authenticatable strategy to defaults.
