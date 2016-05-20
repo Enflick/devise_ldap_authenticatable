@@ -27,9 +27,12 @@ describe 'Connection' do
             'base' => 'ou=testbase,dc=test,dc=com',
             'attribute' => 'cn',
             'user_lookup_attribute' => 'mail',
-            'group_lookup_attribute' => 'memberof'
+            'group_lookup_attribute' => 'memberof',
+            'admin_user' => 'cn=admin,dc=test,dc=com',
+            'admin_password' => 'secret'
         }}
         ::Devise.ldap_ad_group_check = true
+        ::Devise.ldap_auth_username_builder = Proc.new() {|attribute, login, ldap| "#{attribute}=#{login},#{ldap.base}"}
         connection = Devise::LDAP::Connection.new(:login => admin.email, :password => admin.password, :admin => true)
         connection.in_group? ''
       end
