@@ -69,7 +69,6 @@ describe 'Users' do
       it "should not create user in the database" do
         @user = User.find_for_ldap_authentication(:email => "example.user@test.com", :password => "secret")
         assert(User.all.blank?)
-        assert(@user.new_record?)
       end
 
       describe "creating users is enabled" do

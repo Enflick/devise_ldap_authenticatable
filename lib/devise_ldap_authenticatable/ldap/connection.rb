@@ -26,7 +26,7 @@ module Devise
         @group_lookup_attribute = ldap_config["group_lookup_attribtue"] || 'memberof'
         @group_base = ldap_config["group_base"]
         @check_group_membership = ldap_config.has_key?("check_group_membership") ? ldap_config["check_group_membership"] : ::Devise.ldap_check_group_membership
-        @check_group_membership_without_admin = ldap_config.has_key?("check_group_membership_without_admin") ? ldap_config["check_group_membership_without_admin"] : ::Devise.ldap_check_group_membership_without_adminkj
+        @check_group_membership_without_admin = ldap_config.has_key?("check_group_membership_without_admin") ? ldap_config["check_group_membership_without_admin"] : ::Devise.ldap_check_group_membership_without_admin
         @required_groups = ldap_config["required_groups"]
         @required_attributes = ldap_config["require_attribute"]
 
@@ -133,31 +133,19 @@ module Devise
           group_checking_ldap = Connection.admin
         end
 
-        unless ::Devise.ldap_ad_group_check
+        if ::Devise.ldap_ad_group_check
+          filter = Net::LDAP::Filter.join(
+              Net::LDAP::Filter.eq(@user_lookup_attribute, dn),
+              Net::LDAP::Filter.eq(@group_lookup_attribute, group_name)
+          )
+          search_result = group_checking_ldap.search(base: @ldap.base, filter: filter, return_result: true, attributes: %w[memberof])
+          in_group = search_result && search_result.first && search_result.first[:memberOf].is_a?(Array)
+        else
           group_checking_ldap.search(:base => group_name, :scope => Net::LDAP::SearchScope_BaseObject) do |entry|
             if entry[group_attribute].include? dn
               in_group = true
             end
           end
-        else
-          # # AD optimization - extension will recursively check sub-groups with one query
-          # # "(memberof:1.2.840.113556.1.4.1941:=group_name)"
-          # search_result = group_checking_ldap.search(:base => dn,
-          #                   :filter => Net::LDAP::Filter.ex("memberof:1.2.840.113556.1.4.1941", group_name),
-          #                   :scope => Net::LDAP::SearchScope_BaseObject)
-          # # Will return  the user entry if belongs to group otherwise nothing
-          # #if search_result.length == 1 && search_result[0].dn.eql?(dn)
-          # #  in_group = true
-          #   DeviseLdapAuthenticatable::Logger.send("User #{dn} IS included in group: #{group_name}")
-          # end
-          filter = Net::LDAP::Filter.join(
-          Net::LDAP::Filter.eq(@user_lookup_attribute, dn),
-          Net::LDAP::Filter.eq(@group_lookup_attribute, group_name)
-          )
-          #filter = Net::LDAP::Filter.eq(@user_lookup_attribute, dn)
-          search_result = group_checking_ldap.search(base: @ldap.base, filter: filter, return_result: true, attributes: %w[memberOf])
-          puts @user_lookup_attribute, dn, search_result.inspect
-          in_group = search_result && search_result.first && search_result.first[:memberOf].is_a?(Array)
         end
 
         unless in_group
