@@ -22,8 +22,8 @@ module Devise
 
         @ldap_auth_username_builder = ::Devise.ldap_auth_username_builder
 
-        @user_lookup_attribute = ldap_config["user_lookup_attribute"]
-        @group_lookup_attribute = ldap_config["group_lookup_attribtue"]
+        @user_lookup_attribute = ldap_config["user_lookup_attribute"] || "mail"
+        @group_lookup_attribute = ldap_config["group_lookup_attribtue"] || "memberof"
         @group_base = ldap_config["group_base"]
         @check_group_membership = ldap_config.has_key?("check_group_membership") ? ldap_config["check_group_membership"] : ::Devise.ldap_check_group_membership
         @check_group_membership_without_admin = ldap_config.has_key?("check_group_membership_without_admin") ? ldap_config["check_group_membership_without_admin"] : ::Devise.ldap_check_group_membership_without_admin
