@@ -30,9 +30,6 @@ module Devise
         @required_groups = ldap_config["required_groups"]
         @required_attributes = ldap_config["require_attribute"]
 
-        @user_lookup_attribute = ldap_config["user_lookup_attribute"] || 'mail'
-        @group_lookup_attribute = ldap_config["group_lookup_attribtue"] || 'memberof'
-
         @ldap.auth ldap_config["admin_user"], ldap_config["admin_password"] if params[:admin]
 
         @login = params[:login]
