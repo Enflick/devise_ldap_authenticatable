@@ -19,24 +19,39 @@ describe 'Connection' do
     end
     context 'through ldap_ad_group_check' do
       it 'should search using user_lookup_attribute and group_lookup_attribute', :focus => true do
-        admin = Factory.create(:admin)
+        @admin = Factory.create(:admin)
+        @group_lookup_attribute = 'memberof'
+        @user_lookup_attribute = 'extensionAttribute2'
+        @group_name = 'cn=admins,ou=groups,dc=test,dc=com'
         ::Devise.ldap_config = Proc.new() {{
             'host' => 'localhost',
             'port' => 3389,
-            'base' => 'ou=testbase,dc=test,dc=com',
-            'group_base' => 'ou=testbase,dc=test,dc=com',
+            'base' => 'dc=test,dc=com',
+            'group_base' => 'ou=groups,dc=test,dc=com',
             'attribute' => 'cn',
-            'user_lookup_attribute' => 'mail',
-            'group_lookup_attribute' => 'memberof',
+            'user_lookup_attribute' => 'extensionAttribute2',
+            'group_lookup_attribute' => 'memberOf',
             'admin_user' => 'cn=admin,dc=test,dc=com',
             'admin_password' => 'secret',
-            'required_groups' => ['testgroup1', 'testgroup2']
+            'required_groups' => ['cn=admins,ou=groups,dc=test,dc=com']
         }}
         ::Devise.ldap_ad_group_check = true
         ::Devise.ldap_check_group_membership = true
-        ::Devise.ldap_auth_username_builder = Proc.new() {|attribute, login, ldap| "#{login}"}
-        connection = Devise::LDAP::Connection.new(:login => admin.email, :password => admin.password, :admin => true)
-        assert_equal true, connection.in_group?('cn=admins,ou=testbase,dc=test,dc=com')
+        ::Devise.ldap_auth_username_builder = Proc.new() {|attribute, login, ldap| "#{login}" }
+
+        options = {:login => @admin.email, :ldap_auth_username_builder => Proc.new() {|attribute, login, ldap| "#{attribute}=#{login},#{ldap.base}"}, :admin => true}
+        connection = Devise::LDAP::Connection.new(options)
+
+        myHashLDAP = Net::LDAP::Entry.new(Net::BER::BerIdentifiedString.new("example.admin@test.com,ou=people,dc=test,dc=com"))
+        myHashLDAP["memberof"] = Net::BER::BerIdentifiedArray.new([Net::BER::BerIdentifiedString.new("cn=admins,ou=groups,dc=test,dc=com")])
+        search_result = [myHashLDAP]
+
+        group_checking_ldap = double('group_checking_ldap')
+        allow(::Devise::LDAP::Connection).to receive(:admin).and_return(group_checking_ldap)
+        group_checking_ldap.should_receive(:search).with(hash_including(:base => "dc=test,dc=com", :filter => an_instance_of(Net::LDAP::Filter), :return_result => true, :attributes => array_including(["memberof"]))).and_return(search_result)
+        assert_equal true, connection.in_group?(@group_name)
+        group_checking_ldap.should_receive(:search).with(hash_including(:base => "dc=test,dc=com", :filter => an_instance_of(Net::LDAP::Filter), :return_result => true, :attributes => array_including(["memberof"]))).and_return([])
+        assert_equal nil, connection.in_group?('cn=superuser,ou=groups,dc=test,dc=com')
       end
     end
   end

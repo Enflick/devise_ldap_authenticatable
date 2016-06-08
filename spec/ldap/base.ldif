@@ -69,5 +69,5 @@ cn: users
 dn: cn=admins,ou=groups,dc=test,dc=com
 objectClass: groupOfUniqueNames
 objectClass: top
-uniqueMember: cn=example.admin@test.com,ou=people,dc=test,dc=com
+uniqueMember: cn=example.admin@test.com,ou=groups,dc=test,dc=com
 cn: admins
