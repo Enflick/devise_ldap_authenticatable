@@ -12,24 +12,11 @@ module Devise
       def authenticate!
         resource = mapping.to.find_for_ldap_authentication(authentication_hash.merge(password: password))
 
-        return fail(:invalid) unless resource
-
-        if resource.persisted?
-          if validate(resource) { resource.valid_ldap_authentication?(password) }
-            remember_me(resource)
-            resource.after_ldap_authentication
-            success!(resource)
-          else
-            return fail(:invalid) # Invalid credentials
-          end
-        end
-
-        if resource.new_record?
-          if validate(resource) { resource.valid_ldap_authentication?(password) }
-            return fail(:not_found_in_database) # Valid credentials
-          else
-            return fail(:invalid) # Invalid credentials
-          end
+        if resource && validate(resource) { resource.valid_ldap_authentication?(password)}
+          resource.after_ldap_authentication
+          success!(resource)
+        else
+          return fail(:invalid)
         end
       end
     end

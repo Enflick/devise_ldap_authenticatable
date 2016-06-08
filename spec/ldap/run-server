@@ -24,7 +24,7 @@ end
 if ARGV.first == '--ssl'
   cmd = "slapd -d 1 -f #{ssl_out} -h ldaps://localhost:3389"
 else
-  cmd = "slapd -d 1 -f #{normal_out} -h ldap://localhost:3389"
+  cmd = "slapd -d 2 -f #{normal_out} -h ldap://localhost:3389"
 end
 
 puts(cmd)

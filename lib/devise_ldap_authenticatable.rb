@@ -38,6 +38,13 @@ module Devise
 
   mattr_accessor :ldap_ad_group_check
   @@ldap_ad_group_check = false
+
+  mattr_accessor :ldap_auth_password_builder
+  @@ldap_auth_password_builder = Proc.new() {|new_password| Net::LDAP::Password.generate(:sha, new_password) }
+
+
+  mattr_accessor :ldap_check_group_membership_without_admin
+  @@ldap_check_group_membership_without_admin = false
 end
 
 # Add ldap_authenticatable strategy to defaults.

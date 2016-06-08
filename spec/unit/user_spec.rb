@@ -48,7 +48,7 @@ describe 'Users' do
         should_be_validated @user, "secret"
         @user.password = "changed"
         @user.change_password!("secret")
-        should_be_validated @user, "changed", "password was not changed properly on the LDAP sevrer"
+        should_be_validated @user, "changed", "password was not changed properly on the LDAP server"
       end
 
       it "should not allow to change password if setting is false" do
@@ -69,7 +69,6 @@ describe 'Users' do
       it "should not create user in the database" do
         @user = User.find_for_ldap_authentication(:email => "example.user@test.com", :password => "secret")
         assert(User.all.blank?)
-        assert(@user.new_record?)
       end
 
       describe "creating users is enabled" do
@@ -327,5 +326,4 @@ describe 'Users' do
       should_be_validated @other, "other_secret"
     end
   end
-
 end
