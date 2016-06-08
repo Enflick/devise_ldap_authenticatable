@@ -37,39 +37,21 @@ describe 'Connection' do
         }}
         ::Devise.ldap_ad_group_check = true
         ::Devise.ldap_check_group_membership = true
-        ::Devise.ldap_auth_username_builder = Proc.new() {|attribute, login, ldap|
-          "#{login}"
-        }
+        ::Devise.ldap_auth_username_builder = Proc.new() {|attribute, login, ldap| "#{login}" }
 
-        def mockResponse(group_lookup_attribute, user_lookup_attribute, group_name)
-          filter = generate_filter(group_lookup_attribute, user_lookup_attribute, group_name)
-          #TODO: Fix Byteslicing to be a regex, this is a hack to equate the two strings since they are off by one byte whch is the 40th UTF character (apparently not whitespace)
-          if(filter.to_s.byteslice(1..-1) == "&(#{user_lookup_attribute}=cn=example.admin@test.com,ou=people,dc=test,dc=com)(#{group_lookup_attribute}=cn=admins,ou=groups,dc=test,dc=com))".encode('UTF-8'))
-            myHashLDAP = Net::LDAP::Entry.new(Net::BER::BerIdentifiedString.new("example.admin@test.com,ou=people,dc=test,dc=com"))
-            myHashLDAP["memberof"] = Net::BER::BerIdentifiedArray.new([Net::BER::BerIdentifiedString.new("cn=admins,ou=groups,dc=test,dc=com")])
-            search_result = [myHashLDAP]
-          end
-          if !search_result.nil? && !(search_result.first[:memberOf].is_a?(Array).nil?) && search_result && search_result.first && search_result.first[:memberOf].is_a?(Array)
-            true
-          else
-            false
-          end
-        end
+        options = {:login => @admin.email, :ldap_auth_username_builder => Proc.new() {|attribute, login, ldap| "#{attribute}=#{login},#{ldap.base}"}, :admin => true}
+        connection = Devise::LDAP::Connection.new(options)
 
-        def generate_filter(group_lookup_attribute, user_lookup_attribute, group_name)
-          options = {:login => @admin.email,
-                     :ldap_auth_username_builder => Proc.new() {|attribute, login, ldap| "#{attribute}=#{login},#{ldap.base}"},
-                     :admin => true}
-          connection = Devise::LDAP::Connection.new(options)
-          return Net::LDAP::Filter.join(
-              Net::LDAP::Filter.eq(user_lookup_attribute, connection.dn),
-              Net::LDAP::Filter.eq(group_lookup_attribute, group_name))
-        end
+        myHashLDAP = Net::LDAP::Entry.new(Net::BER::BerIdentifiedString.new("example.admin@test.com,ou=people,dc=test,dc=com"))
+        myHashLDAP["memberof"] = Net::BER::BerIdentifiedArray.new([Net::BER::BerIdentifiedString.new("cn=admins,ou=groups,dc=test,dc=com")])
+        search_result = [myHashLDAP]
 
-        #TODO: Fix Byteslicing to be a regex, this is a hack to equate the two strings since they are off by one byte whch is the 40th UTF character (apparently not whitespace)
-        assert_equal true, generate_filter(@group_lookup_attribute, @user_lookup_attribute, @group_name).to_s.byteslice(1..-1) == "&(#{@user_lookup_attribute}=cn=example.admin@test.com,ou=people,dc=test,dc=com)(#{@group_lookup_attribute}=cn=admins,ou=groups,dc=test,dc=com))".encode('UTF-8')
-        assert_equal true, mockResponse(@group_lookup_attribute, @user_lookup_attribute, @group_name)
-        assert_equal false, mockResponse(@group_lookup_attribute, @user_lookup_attribute, 'cn=users,ou=groups,dc=test,dc=com')
+        group_checking_ldap = double('group_checking_ldap')
+        allow(::Devise::LDAP::Connection).to receive(:admin).and_return(group_checking_ldap)
+        group_checking_ldap.should_receive(:search).with(hash_including(:base => "dc=test,dc=com", :filter => an_instance_of(Net::LDAP::Filter), :return_result => true, :attributes => array_including(["memberof"]))).and_return(search_result)
+        assert_equal true, connection.in_group?(@group_name)
+        group_checking_ldap.should_receive(:search).with(hash_including(:base => "dc=test,dc=com", :filter => an_instance_of(Net::LDAP::Filter), :return_result => true, :attributes => array_including(["memberof"]))).and_return([])
+        assert_equal nil, connection.in_group?('cn=superuser,ou=groups,dc=test,dc=com')
       end
     end
   end
